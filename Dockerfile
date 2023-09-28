@@ -15,3 +15,11 @@ EXPOSE 5000
 
 # Comando para iniciar seu servidor Flask quando o contêiner for iniciado
 CMD ["python", "app.py"]
+
+# Defina variáveis de ambiente para o PostgreSQL (se necessário)
+ENV POSTGRES_USER postgres
+ENV POSTGRES_PASSWORD admin@admin
+ENV POSTGRES_DB pegga
+
+# Exponha a porta padrão do PostgreSQL (5432)
+EXPOSE 5432
