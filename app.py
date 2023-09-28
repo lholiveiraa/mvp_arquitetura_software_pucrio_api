@@ -6,10 +6,16 @@ from urllib.parse import quote_plus
 from flask_cors import CORS
 from flask_cors import cross_origin
 
+from flasgger import Swagger
+
+# from flask_restplus import Api, Resource
+
 # Codificar a senha com urllib.parse.quote_plus
 senha = quote_plus('admin@admin')
 
 app = Flask(__name__)
+
+swagger = Swagger(app)
 
 # Configurar o CORS
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
@@ -59,10 +65,53 @@ with app.app_context():
     # Cria as tabelas no banco de dados (execute apenas uma vez)
     db.create_all()
 
+# Defina as informações gerais da API
+app.config['SWAGGER'] = {
+    'title': 'Pegga',
+    'version': '1.0',
+    'description': 'API para criar carrinhos de compras',
+    'basePath': '/api',  # Prefixo para todas as rotas da API
+}
+
 # Rota para criar um novo carrinho
-@app.route('/api/carrinho', methods=['POST'])
+@app.route('/carrinho', methods=['POST'])
 @cross_origin()
 def criar_carrinho():
+    """
+    Criar um novo carrinho de compras
+    ---
+    parameters:
+      - name: corpo
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            cliente_id:
+              type: integer
+              description: ID do cliente
+            data_compra:
+              type: string
+              format: date
+              description: Data da compra
+            status:
+              type: string
+              description: Status do carrinho
+    responses:
+      201:
+        description: Carrinho criado com sucesso
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              description: Mensagem de sucesso
+            carrinho_id:
+              type: integer
+              description: ID do carrinho criado
+      400:
+        description: Já existe um carrinho para este cliente
+    """
     data = request.get_json()
     cliente_id = data.get('cliente_id')
 
@@ -85,6 +134,37 @@ def criar_carrinho():
 @app.route('/api/carrinho/<int:carrinho_id>/adicionar_produto', methods=['POST'])
 @cross_origin()
 def adicionar_produto_ao_carrinho(carrinho_id):
+    """
+    Adicionar um produto ao carrinho de compras
+    ---
+    parameters:
+      - name: carrinho_id
+        in: path
+        required: true
+        type: integer
+        description: ID do carrinho de compras
+      - name: corpo
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            produto_id:
+              type: integer
+              description: ID do produto a ser adicionado
+            quantidade:
+              type: integer
+              description: Quantidade do produto a ser adicionada ao carrinho
+            preco_unitario:
+              type: number
+              format: double
+              description: Preço unitário do produto
+    responses:
+      200:
+        description: Produto adicionado ao carrinho com sucesso
+      404:
+        description: Carrinho não encontrado
+    """
     carrinho = Carrinho.query.get(carrinho_id)
 
     if not carrinho:
@@ -102,27 +182,56 @@ def adicionar_produto_ao_carrinho(carrinho_id):
     db.session.commit()
 
     return jsonify({"message": "Produto adicionado ao carrinho com sucesso!"})
-
 # Rota para listar produtos do carrinho
 @app.route('/api/carrinho/<int:carrinho_id>/produtos', methods=['GET'])
 @cross_origin()
 def listar_produtos_do_carrinho(carrinho_id):
+    """
+    Listar produtos no carrinho de compras
+    ---
+    parameters:
+      - name: carrinho_id
+        in: path
+        required: true
+        type: integer
+        description: ID do carrinho de compras
+    responses:
+      200:
+        description: Lista de produtos no carrinho
+        schema:
+          type: object
+          properties:
+            produtos:
+              type: array
+              items:
+                type: object
+                properties:
+                  produto_id:
+                    type: integer
+                    description: ID do produto
+                  quantidade:
+                    type: integer
+                    description: Quantidade de produtos no carrinho
+                  preco_unitario:
+                    type: number
+                    format: double
+                    description: Preço unitário do produto
+                  subtotal:
+                    type: number
+                    format: double
+                    description: Subtotal do produto no carrinho
+                  detalhes_do_produto:
+                    type: object
+                    description: Detalhes do produto
+      404:
+        description: Carrinho não encontrado
+    """
     carrinho = Carrinho.query.get(carrinho_id)
 
     if not carrinho:
         return jsonify({"message": "Carrinho não encontrado"}), 404
 
-    produtos_no_carrinho = CarrinhoProdutos.query.filter_by(carrinho_id=carrinho_id).all()
-
-    # produtos = []
-    # for produto in produtos_no_carrinho:
-    #     produtos.append({
-    #         "produto_id": produto.produto_id,
-    #         "quantidade": produto.quantidade,
-    #         "preco_unitario": float(produto.preco_unitario),
-    #         "subtotal": float(produto.subtotal)
-    #     })
-    
+    produtos_no_carrinho = CarrinhoProdutos.query.filter_by(carrinho_id=carrinho_id).all()  
     
     produtos_com_detalhes = []
     for produto in produtos_no_carrinho:
@@ -138,7 +247,6 @@ def listar_produtos_do_carrinho(carrinho_id):
         })
 
     return jsonify({"produtos": produtos_com_detalhes})
-
 
 # Função para obter os detalhes do produto de outra API
 def obter_detalhes_do_produto(produto_id):
@@ -164,12 +272,41 @@ def obter_detalhes_do_produto(produto_id):
         return {"message": "Erro ao conectar-se à outra API"}, 500
     
     
-
-
-#Rota para listar carrinho com base no id
+# Rota para listar carrinho com base no id
 @app.route('/api/carrinho/<int:id>', methods=['GET'])
 @cross_origin()
 def listar_carrinho(id):
+    """
+    Listar informações do carrinho de compras com base no ID
+    ---
+    parameters:
+      - name: id
+        in: path
+        required: true
+        type: integer
+        description: ID do carrinho de compras
+    responses:
+      200:
+        description: Informações do carrinho de compras
+        schema:
+          type: object
+          properties:
+            id:
+              type: integer
+              description: ID do carrinho de compras
+            cliente_id:
+              type: integer
+              description: ID do cliente associado ao carrinho
+            data_compra:
+              type: string
+              format: date-time
+              description: Data da compra no formato ISO 8601
+            status:
+              type: string
+              description: Status do carrinho de compras
+      404:
+        description: Carrinho não encontrado
+    """
     carrinho = Carrinho.query.get(id)
 
     if not carrinho:
@@ -186,6 +323,26 @@ def listar_carrinho(id):
 @app.route('/api/carrinho/<int:carrinho_id>/remover_produto/<int:produto_id>', methods=['DELETE'])
 @cross_origin()
 def remover_produto_do_carrinho(carrinho_id, produto_id):
+    """
+    Remover um produto do carrinho de compras
+    ---
+    parameters:
+      - name: carrinho_id
+        in: path
+        required: true
+        type: integer
+        description: ID do carrinho de compras
+      - name: produto_id
+        in: path
+        required: true
+        type: integer
+        description: ID do produto a ser removido do carrinho
+    responses:
+      200:
+        description: Produto removido do carrinho com sucesso
+      404:
+        description: Carrinho não encontrado ou produto não encontrado no carrinho
+    """
     carrinho = Carrinho.query.get(carrinho_id)
 
     if not carrinho:
@@ -205,6 +362,33 @@ def remover_produto_do_carrinho(carrinho_id, produto_id):
 @app.route('/api/carrinho/<int:carrinho_id>/atualizar_quantidade', methods=['PUT'])
 @cross_origin()
 def atualizar_quantidade_do_produto_no_carrinho(carrinho_id):
+    """
+    Atualizar a quantidade de um produto no carrinho de compras
+    ---
+    parameters:
+      - name: carrinho_id
+        in: path
+        required: true
+        type: integer
+        description: ID do carrinho de compras
+      - name: corpo
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            produto_id:
+              type: integer
+              description: ID do produto a ser atualizado
+            quantidade:
+              type: integer
+              description: Nova quantidade do produto no carrinho
+    responses:
+      200:
+        description: Quantidade do produto atualizada com sucesso
+      404:
+        description: Carrinho não encontrado ou produto não encontrado no carrinho
+    """
     carrinho = Carrinho.query.get(carrinho_id)
 
     if not carrinho:
