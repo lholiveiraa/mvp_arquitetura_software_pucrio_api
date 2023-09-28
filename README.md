@@ -1,6 +1,4 @@
 
-Aqui está um README para a aplicação que você forneceu:
-
 ### Documentação da Aplicação
 Esta é uma documentação para a aplicação Python Flask que implementa um sistema de carrinho de compras. A aplicação permite criar carrinhos de compras, adicionar produtos a eles, listar produtos em um carrinho e realizar operações relacionadas ao carrinho.
 
