@@ -1,5 +1,5 @@
 # Use uma imagem base que inclua o Python, por exemplo:
-FROM python:3.11.5
+FROM python:3.11
 
 # Defina o diretório de trabalho dentro do contêiner
 WORKDIR /app
